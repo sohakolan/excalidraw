@@ -89,7 +89,11 @@ import {
 } from "./app-jotai";
 import {
   FIREBASE_STORAGE_PREFIXES,
+  isAIBackendEnabled,
+  isCollabEnabled,
   isExcalidrawPlusSignedUser,
+  isPlusEnabled,
+  isSharingEnabled,
   STORAGE_KEYS,
   SYNC_BROWSER_TABS_TIMEOUT,
 } from "./app_constants";
@@ -376,7 +380,10 @@ const ExcalidrawWrapper = () => {
   const excalidrawAPI = useExcalidrawAPI();
 
   const [errorMessage, setErrorMessage] = useState("");
-  const isCollabDisabled = isRunningInIframe();
+  // Collaboration requires a WebSocket backend. When none is configured (the
+  // default for this self-hosted fork), disable it entirely instead of trying
+  // to reach the official Excalidraw servers.
+  const isCollabDisabled = isRunningInIframe() || !isCollabEnabled;
 
   const { editorTheme, appTheme, setAppTheme } = useHandleAppTheme();
 
@@ -824,12 +831,16 @@ const ExcalidrawWrapper = () => {
   const isOffline = useAtomValue(isOfflineAtom);
   const isCollabAvailable =
     !isCollabDisabled && (!isOffline || isCollaborating);
+  // Share links need the JSON backend. Collaboration is one way to share, but
+  // read-only links are also valid on their own.
+  const isShareAvailable =
+    isCollabAvailable || (isSharingEnabled && !isOffline);
 
   useEffect(() => {
-    if (!isCollabAvailable) {
+    if (!isShareAvailable) {
       setShareDialogState({ isOpen: false });
     }
-  }, [isCollabAvailable, setShareDialogState]);
+  }, [isShareAvailable, setShareDialogState]);
 
   const localStorageQuotaExceeded = useAtomValue(localStorageQuotaExceededAtom);
 
@@ -961,35 +972,41 @@ const ExcalidrawWrapper = () => {
         initialData={initialStatePromiseRef.current.promise}
         isCollaborating={isCollaborating}
         onPointerUpdate={collabAPI?.onPointerUpdate}
+        aiEnabled={isAIBackendEnabled}
         UIOptions={{
           canvasActions: {
             toggleTheme: true,
             export: {
-              onExportToBackend,
-              renderCustomUI: excalidrawAPI
-                ? (elements, appState, files) => {
-                    return (
-                      <ExportToExcalidrawPlus
-                        elements={elements}
-                        appState={appState}
-                        files={files}
-                        name={excalidrawAPI.getName()}
-                        onError={(error) => {
-                          excalidrawAPI?.updateScene({
-                            appState: {
-                              errorMessage: error.message,
-                            },
-                          });
-                        }}
-                        onSuccess={() => {
-                          excalidrawAPI.updateScene({
-                            appState: { openDialog: null },
-                          });
-                        }}
-                      />
-                    );
-                  }
+              // only offer the "shareable link" export when a backend is
+              // configured, otherwise it would fail silently
+              onExportToBackend: isSharingEnabled
+                ? onExportToBackend
                 : undefined,
+              renderCustomUI:
+                isPlusEnabled && excalidrawAPI
+                  ? (elements, appState, files) => {
+                      return (
+                        <ExportToExcalidrawPlus
+                          elements={elements}
+                          appState={appState}
+                          files={files}
+                          name={excalidrawAPI.getName()}
+                          onError={(error) => {
+                            excalidrawAPI?.updateScene({
+                              appState: {
+                                errorMessage: error.message,
+                              },
+                            });
+                          }}
+                          onSuccess={() => {
+                            excalidrawAPI.updateScene({
+                              appState: { openDialog: null },
+                            });
+                          }}
+                        />
+                      );
+                    }
+                  : undefined,
             },
           },
         }}
@@ -1001,17 +1018,19 @@ const ExcalidrawWrapper = () => {
         theme={editorTheme}
         onThemeChange={setAppTheme}
         renderTopRightUI={(isMobile) => {
-          if (isMobile || !collabAPI || !isCollabAvailable) {
+          if (isMobile || !isShareAvailable) {
             return null;
           }
 
           return (
             <div className="excalidraw-ui-top-right">
-              {excalidrawAPI?.getEditorInterface().formFactor === "desktop" && (
-                <ExcalidrawPlusPromoBanner
-                  isSignedIn={isExcalidrawPlusSignedUser}
-                />
-              )}
+              {isPlusEnabled &&
+                excalidrawAPI?.getEditorInterface().formFactor ===
+                  "desktop" && (
+                  <ExcalidrawPlusPromoBanner
+                    isSignedIn={isExcalidrawPlusSignedUser}
+                  />
+                )}
 
               {collabError.message && <CollabError collabError={collabError} />}
               <LiveCollaborationTrigger
@@ -1049,7 +1068,7 @@ const ExcalidrawWrapper = () => {
         <OverwriteConfirmDialog>
           <OverwriteConfirmDialog.Actions.ExportToImage />
           <OverwriteConfirmDialog.Actions.SaveToDisk />
-          {excalidrawAPI && (
+          {isPlusEnabled && excalidrawAPI && (
             <OverwriteConfirmDialog.Action
               title={t("overwriteConfirm.action.excalidrawPlus.title")}
               actionLabel={t("overwriteConfirm.action.excalidrawPlus.button")}
@@ -1067,7 +1086,9 @@ const ExcalidrawWrapper = () => {
           )}
         </OverwriteConfirmDialog>
         <AppFooter onChange={() => excalidrawAPI?.refresh()} />
-        {excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
+        {isAIBackendEnabled && excalidrawAPI && (
+          <AIComponents excalidrawAPI={excalidrawAPI} />
+        )}
 
         <TTDDialogTrigger />
         {isCollaborating && isOffline && (
@@ -1108,7 +1129,7 @@ const ExcalidrawWrapper = () => {
           }}
         />
 
-        <AppSidebar />
+        {isPlusEnabled && <AppSidebar />}
 
         {errorMessage && (
           <ErrorDialog onClose={() => setErrorMessage("")}>
@@ -1163,7 +1184,7 @@ const ExcalidrawWrapper = () => {
             {
               label: t("labels.share"),
               category: DEFAULT_CATEGORIES.app,
-              predicate: isCollabAvailable,
+              predicate: isShareAvailable,
               icon: share,
               keywords: [
                 "link",
@@ -1255,20 +1276,22 @@ const ExcalidrawWrapper = () => {
                 );
               },
             },
-            ...(isExcalidrawPlusSignedUser
-              ? [
-                  {
-                    ...ExcalidrawPlusAppCommand,
-                    label: "Sign in / Go to Excalidraw+",
-                  },
-                ]
-              : [ExcalidrawPlusCommand, ExcalidrawPlusAppCommand]),
+            ...(isPlusEnabled
+              ? isExcalidrawPlusSignedUser
+                ? [
+                    {
+                      ...ExcalidrawPlusAppCommand,
+                      label: "Sign in / Go to Excalidraw+",
+                    },
+                  ]
+                : [ExcalidrawPlusCommand, ExcalidrawPlusAppCommand]
+              : []),
 
             {
               label: t("overwriteConfirm.action.excalidrawPlus.button"),
               category: DEFAULT_CATEGORIES.export,
               icon: exportToPlus,
-              predicate: true,
+              predicate: isPlusEnabled,
               keywords: ["plus", "export", "save", "backup"],
               perform: () => {
                 if (excalidrawAPI) {

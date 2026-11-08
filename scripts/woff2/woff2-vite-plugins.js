@@ -1,5 +1,7 @@
-// define `EXCALIDRAW_ASSET_PATH` as a SSOT
-const OSS_FONTS_CDN = "https://excalidraw.nyc3.cdn.digitaloceanspaces.com/oss/";
+// Self-hosted fork: fonts are served from the app's own origin, not the
+// Excalidraw DigitalOcean CDN.
+const OSS_FONTS_CDN = "/";
+const OSS_FONTS_PREFIX = OSS_FONTS_CDN.replace(/\/+$/, "") + "/";
 const OSS_FONTS_FALLBACK = "/";
 
 /**
@@ -24,7 +26,7 @@ module.exports.woff2BrowserPlugin = () => {
 
       @font-face {
         font-family: "Assistant";
-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-Regular.woff2)
+        src: url(${OSS_FONTS_PREFIX}fonts/Assistant/Assistant-Regular.woff2)
             format("woff2"),
           url(./Assistant-Regular.woff2) format("woff2");
         font-weight: 400;
@@ -34,7 +36,7 @@ module.exports.woff2BrowserPlugin = () => {
 
       @font-face {
         font-family: "Assistant";
-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-Medium.woff2)
+        src: url(${OSS_FONTS_PREFIX}fonts/Assistant/Assistant-Medium.woff2)
             format("woff2"),
           url(./Assistant-Medium.woff2) format("woff2");
         font-weight: 500;
@@ -44,7 +46,7 @@ module.exports.woff2BrowserPlugin = () => {
 
       @font-face {
         font-family: "Assistant";
-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-SemiBold.woff2)
+        src: url(${OSS_FONTS_PREFIX}fonts/Assistant/Assistant-SemiBold.woff2)
             format("woff2"),
           url(./Assistant-SemiBold.woff2) format("woff2");
         font-weight: 600;
@@ -54,7 +56,7 @@ module.exports.woff2BrowserPlugin = () => {
 
       @font-face {
         font-family: "Assistant";
-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-Bold.woff2)
+        src: url(${OSS_FONTS_PREFIX}fonts/Assistant/Assistant-Bold.woff2)
             format("woff2"),
           url(./Assistant-Bold.woff2) format("woff2");
         font-weight: 700;
@@ -77,7 +79,7 @@ module.exports.woff2BrowserPlugin = () => {
       <!-- Preload all default fonts to avoid swap on init -->
       <link
         rel="preload"
-        href="${OSS_FONTS_CDN}fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2"
+        href="${OSS_FONTS_PREFIX}fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2"
         as="font"
         type="font/woff2"
         crossorigin="anonymous"
@@ -85,21 +87,21 @@ module.exports.woff2BrowserPlugin = () => {
       <!-- For Nunito only preload the latin range, which should be good enough for now -->
       <link
         rel="preload"
-        href="${OSS_FONTS_CDN}fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2"
+        href="${OSS_FONTS_PREFIX}fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2"
         as="font"
         type="font/woff2"
         crossorigin="anonymous"
       />
       <link
         rel="preload"
-        href="${OSS_FONTS_CDN}fonts/Assistant/Assistant-SemiBold.woff2"
+        href="${OSS_FONTS_PREFIX}fonts/Assistant/Assistant-SemiBold.woff2"
         as="font"
         type="font/woff2"
         crossorigin="anonymous"
       />
       <link
         rel="preload"
-        href="${OSS_FONTS_CDN}fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2"
+        href="${OSS_FONTS_PREFIX}fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2"
         as="font"
         type="font/woff2"
         crossorigin="anonymous"

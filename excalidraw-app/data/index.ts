@@ -203,6 +203,10 @@ export const importFromBackend = async (
   id: string,
   decryptionKey: string,
 ): Promise<ImportedDataState> => {
+  if (!BACKEND_V2_GET) {
+    window.alert(t("alerts.importBackendFailed"));
+    return {};
+  }
   try {
     const response = await fetch(`${BACKEND_V2_GET}${id}`);
 
@@ -250,6 +254,13 @@ export const exportToBackend = async (
   appState: Partial<AppState>,
   files: BinaryFiles,
 ): Promise<ExportToBackendResult> => {
+  if (!BACKEND_V2_POST) {
+    return {
+      url: null,
+      errorMessage: "Sharing is disabled on this instance.",
+    };
+  }
+
   const encryptionKey = await generateEncryptionKey("string");
 
   const payload = await compressData(

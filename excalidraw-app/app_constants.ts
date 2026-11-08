@@ -59,3 +59,18 @@ export const COOKIES = {
 export const isExcalidrawPlusSignedUser = document.cookie.includes(
   COOKIES.AUTH_STATE_COOKIE,
 );
+
+/**
+ * Self-hosting feature flags.
+ *
+ * Leave the corresponding `VITE_APP_*` variable empty in `.env.production` to
+ * disable a feature entirely instead of pointing it at the official Excalidraw
+ * servers. This fork is meant to run as a fully static, self-contained app.
+ */
+export const isCollabEnabled = !!import.meta.env.VITE_APP_WS_SERVER_URL;
+export const isSharingEnabled = !!import.meta.env.VITE_APP_BACKEND_V2_POST_URL;
+export const isAIBackendEnabled = !!import.meta.env.VITE_APP_AI_BACKEND;
+export const isPlusEnabled = !!import.meta.env.VITE_APP_PLUS_LP;
+export const isLibraryStoreEnabled = !!import.meta.env.VITE_APP_LIBRARY_URL;
+export const isLibraryPublishEnabled = !!import.meta.env
+  .VITE_APP_LIBRARY_BACKEND;
